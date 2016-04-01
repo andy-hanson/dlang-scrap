@@ -1,0 +1,10 @@
+{
+	"name" : "noze",
+	"description" : "Hello World - A minimal DUB bundle.",
+	"license": "UNLICENSE",
+	"dependencies": {
+	},
+	"buildRequirements": [
+		"requireContracts"
+	]
+}
