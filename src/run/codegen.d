@@ -3,7 +3,7 @@ import compile.check : checkAll, Checks, Binding;
 import symbol : Name;
 import util.array : isEmpty, tail;
 
-import insn : CodeWriter, GeneratedCode, Local;
+import run.code : Code, CodeWriter, Local;
 import runtime : Fn;
 
 Fn[Name] generateFns(ModuleAst ast, Checks checks) {
@@ -18,7 +18,7 @@ Fn[Name] generateFns(ModuleAst ast, Checks checks) {
 
 private:
 
-GeneratedCode genCode(Decl.Val.Fn fn, Checks checks) {
+Code genCode(Decl.Val.Fn fn, Checks checks) {
 	CodeWriter cw = new CodeWriter();
 	
 	Local[Signature.Parameter] locals;
@@ -48,11 +48,8 @@ class ExprWriter : Expr.VisitorVoid {
 		//(we should have associated the local's number with it.)
 		checks.binding(e).accept(new class Binding.Visitor {
 			override void visit(Binding.Builtin b) {
-				final switch (b.kind) with (Binding.Builtin.Kind) {
-					case add:
-						//TODO: construct a lambda
-						throw new Error("TODO");
-				}
+				//TODO: access a lambda for it
+				throw new Error("TODO");
 			}
 			override void visit(Binding.Declared d) {
 				// TODO: for Fn, construct a lambda. For Val, just push it.
@@ -81,7 +78,7 @@ class ExprWriter : Expr.VisitorVoid {
 		else {
 			checks.binding(access).accept(new class Binding.Visitor {
 				override void visit(Binding.Builtin b) {
-					final switch (b.kind) with (Binding.Builtin.Kind) {
+				final switch (b.kind) with (Binding.Builtin.Kind) {
 						case add:
 							assert(e.args.length > 1);
 							visitAny(e.args[0]);
@@ -89,6 +86,12 @@ class ExprWriter : Expr.VisitorVoid {
 								visitAny(arg);
 								cw.add();
 							}
+							break;
+						case eq:
+							assert(e.args.length == 2); //TODO
+							visitAny(e.args[0]);
+							visitAny(e.args[1]);
+							cw.eq();
 					}
 				}
 				override void visit(Binding.Declared d) {

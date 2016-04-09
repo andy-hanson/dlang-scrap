@@ -22,7 +22,7 @@ abstract immutable class Expr_C : Statement {
 		mixin V!(Expr.Cond);
 		mixin V!(Expr.Literal);	
 	}
-	static abstract class Visitor(P, R) : AnyExprVisitor {
+	static abstract class Visitor(P, R) : VisitorAny {
 		mixin template V(T) {
 			R visit(T e, P p);
 			override void* visit(T e, void* p) {
@@ -85,7 +85,7 @@ abstract immutable class Expr_C : Statement {
 		*/
 	}
 
-	private R accept(P, R)(ExprVisitor!(P, R) v, P p) {
+	R accept(P, R)(Visitor!(P, R) v, P p) {
 		return cast(R) accept(v, cast(void*) p);
 	}
 	abstract void accept(VisitorVoid v);

@@ -5,8 +5,8 @@ import compile.parse : parse;
 import symbol : Symbols, Name;
 
 import run.any : Any;
+import run.code : Code;
 import codegen : generateFns;
-import insn : GeneratedCode;
 import interpreter : interpret;
 
 //TODO: MOVE
@@ -48,8 +48,8 @@ private:
 
 class Fn {
 	Decl.Val.Fn ast;
-	GeneratedCode code;
-	this(Decl.Val.Fn ast, GeneratedCode code) {
+	Code code;
+	this(Decl.Val.Fn ast, Code code) {
 		this.ast = ast;
 		this.code = code;
 	}

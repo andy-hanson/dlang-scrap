@@ -27,15 +27,18 @@ abstract immutable class Binding_C {
 		}
 
 		static enum Kind {
-			add
+			add,
+			eq
 		}
 
 		static immutable Builtin
-			add = new Builtin(Kind.add);
+			add = new Builtin(Kind.add),
+			eq = new Builtin(Kind.eq);
 
 		static immutable(Builtin[Name]) nameToBuiltin(Name delegate(string) pure name) pure {
 			return [
-				name("+"): add
+				name("+"): add,
+				name("=?"): eq
 			];
 		}
 

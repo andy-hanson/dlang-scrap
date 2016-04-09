@@ -1,5 +1,6 @@
 module compile.compileContext;
 
+import std.format : format;
 import std.typecons : NullableRef;
 
 import compile.language;

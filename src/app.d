@@ -1,8 +1,8 @@
 import std.stdio : writeln;
 
 import run.any : Any;
-import insn : GeneratedCode, CodeWriter;
-import interpreter : interpret, debugInterpret;
+import run.code : CodeWriter, Code;
+import interpreter : interpret;
 import symbol : Name, TypeName, Symbols;
 import rtype : RType, Property;
 
@@ -18,6 +18,7 @@ import rtype : RType, Property;
 import compile.check : checkAll;
 import compile.compileContext : CompileContext;
 import compile.parse : parse;
+import run.debug_interpreter : showCode;
 import runtime : Fn, Module, Runtime;
 import util.array : pop;
 
@@ -95,7 +96,7 @@ return
 
 string src = """
 fn f Bool a Int
-	+ a a
+	=? a 0
 """;
 
 // TODO: fix scoop() test (get labels working so we don't just see '1337')
@@ -112,7 +113,8 @@ void main() {
 	auto r = new Runtime();
 	Module m = r.loadModule(src);
 	Fn fn = m.getFn("f");
-	writeln(fn(Any.Int(3)).show);
+	writeln(fn.code.showCode());
+	//writeln(fn(Any.Int(3)).show);
 	
 	/*
 	auto ctx = new CompileContext();
@@ -130,7 +132,7 @@ void main() {
 
 
 void scoop() {
-	GeneratedCode genInsns() pure {
+	Code genInsns() pure {
 		with (new CodeWriter()) {
 			/*
 			ldc(Any.Int(0));
@@ -169,8 +171,6 @@ void scoop() {
 	}
 
 	auto code = genInsns();
-	//writeln(code.code);
-	//debugInterpret(code);
 	interpret(code);
 }
 
@@ -183,7 +183,7 @@ void poop() {
 	auto propY = new Property(symbols.name("y"), RType.Primitive.Real);
 	auto point = new RType.Record(symbols.typeName("Point"), [propX, propY]);
 
-	GeneratedCode getInsns() pure {
+	Code getInsns() pure {
 		with (new CodeWriter()) {
 			auto block0 = block();
 
