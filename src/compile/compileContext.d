@@ -8,8 +8,6 @@ import loc : Loc, Pos;
 import symbol : Name, Symbols;
 import util.option : Opt;
 
-import token : Token;
-
 class CompileContext {
 	Symbols symbols;
 

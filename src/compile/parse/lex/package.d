@@ -1,52 +1,64 @@
 module compile.parse.lex;
 
+import std.stdio; //TODO:KILL
+
 import ast : Expr;
-import compile.compileContext : CompileContext;
 import loc : Loc, Pos;
-import util : isInRange, nullOr;
+import symbol : Name, TypeName;
+import util : isInRange;
 
-import groupContext : GroupContext;
-import sourceContext : SourceContext;
-import token : Token;
+import compile.compileContext : CompileContext;
+import compile.parse.lex.reader : Reader;
+import compile.parse.lex.token : Token;
 
-Token.Group.Block lex(string source, CompileContext ctx) {
+immutable(Token[]) lex(string source, CompileContext ctx) {
 	return Lexer(source, ctx).lex();
 }
 
 private:
 
 struct Lexer {
-	CompileContext ctx;
-	SourceContext source;
-	GroupContext groups;
+	//TODO: rename to `reader`
+	private Reader source;
+	private CompileContext ctx;
+	private uint indent;
+	Token[] res;
+
+	void output(Token t) {
+		res ~= t;
+	}
 
 	this(string source, CompileContext ctx) {
+		this.source = new Reader(source);
 		this.ctx = ctx;
-		this.source = SourceContext(source, ctx);
-		this.groups = GroupContext(ctx);
+		this.indent = 0;
 	}
 
-	Token.Group.Block lex() {
-		lexPlain();
-		return groups.finish(source.pos);
+	Pos pos() {
+		return source.pos;
+	}
+	Loc locFrom(Pos start) {
+		return source.locFrom(start);
 	}
 
-	void lexPlain() {
-		uint indent = 0;
+	immutable(Token[]) lex() {
+		go();
+		return cast(immutable) res;
+	}
 
-		while (true) {
-			ushort startColumn = source.column;
+	void go() {
+		for (;;) {
+			Pos startPos = source.pos;
+
+			void t(Token.Kind kind) {
+				output(Token(locFrom(startPos), kind));
+			}
+
 			char characterEaten = source.eat();
-
-			Pos startPos() pure {
-				return Pos(source.line, startColumn);
-			}
-			Loc loc() pure {
-				return source.locFrom(startPos());
-			}
 
 			switch (characterEaten) {
 				case '\0':
+					t(Token.Kind.end);
 					return;
 
 				case ' ':
@@ -61,52 +73,58 @@ struct Lexer {
 					indent = lexIndent();
 					if (indent > oldIndent) {
 						ctx.check(indent == oldIndent + 1, source.pos, l => l.tooMuchIndent);
-						groups.openBlock(startPos());
-						groups.openLine(source.pos());
+						t(Token.Kind.indent);
 					} else {
-						Pos p = startPos();
-						foreach (i; indent..oldIndent)
-							groups.closeGroupsForDedent(p);
-						groups.closeLine(p);
-						groups.openLine(source.pos);
+						foreach (i; indent..oldIndent) {
+							t(Token.Kind.dedent);
+							//t(Token.Kind.newline);
+						}
 					}
 					break;
 
 				case '|':
-					throw new Error("TODO");
-
-				case ':':
-					groups ~= new Token.Keyword(loc(), Token.Keyword.Kind.colon);
+					auto isDocComment = source.tryEat('|');
+					if (!(source.tryEat(' ') || source.tryEat('\t') || source.peek == '\n'))
+						ctx.warn(source.pos, l => l.commentNeedsSpace);
+					source.skipRestOfLine();
 					break;
 
-				case ',':
-					groups ~= new Token.Keyword(loc(), Token.Keyword.Kind.comma);
+				case ':':
+					t(Token.Kind.colon);
 					break;
 
 				case 'A': .. case 'Z':
-					lexTypeName(startPos());
+					lexTypeName(startPos);
 					break;
 
-				case 'a': .. case 'z': case '+': case '*': case '/':
-					lexName(startPos());
+				case 'a': .. case 'z': case '+': case '*': case '/': case '=': case '?':
+					lexName(startPos);
 					break;
 
 				case '\t':
 					throw ctx.fail(source.pos, l => l.nonLeadingTab);
 
 				case '-':
-					if (source.peek().isInRange('0', '9'))
-						lexNumber(startPos());
+					if (source.peek.isInRange('0', '9'))
+						lexNumber(startPos);
 					else
-						lexName(startPos());
+						lexName(startPos);
+					break;
+
+				case '(':
+					t(Token.Kind.lparen);
+					break;
+
+				case ')':
+					t(Token.Kind.rparen);
 					break;
 
 				case '0': .. case '9':
-					lexNumber(startPos());
+					lexNumber(startPos);
 					break;
 
 				default:
-					throw ctx.fail(source.pos(), l => l.unrecognizedCharacter(characterEaten));
+					throw ctx.fail(source.pos, l => l.unrecognizedCharacter(characterEaten));
 			}
 		}
 	}
@@ -118,20 +136,23 @@ struct Lexer {
 	}
 
 	void lexName(Pos start) {
-		auto name = source.takeName();
-		auto loc = source.locFrom(start);
-		auto keyword = ctx.symbols.keywordFromName(loc, name);
-		groups ~= keyword.nullOr!Token(new Token.Name(loc, name));
+		Name name = ctx.symbols.name(source.takeNameLike());
+		Loc loc = source.locFrom(start);
+		auto keyword = ctx.symbols.keywordFromName(name);
+		if (keyword.hasValue)
+			output(Token(loc, keyword.value));
+		else
+			output(Token.name(loc, name));
 	}
 
 	void lexTypeName(Pos start) {
-		auto name = source.takeTypeName();
-		auto loc = source.locFrom(start);
-		groups ~= new Token.TypeName(loc, name);
+		TypeName name = ctx.symbols.typeName(source.takeNameLike());
+		Loc loc = source.locFrom(start);
+		output(Token.typeName(loc, name));
 	}
 
 	void lexNumber(Pos start) {
-		auto maybeSpecial() {
+		Expr.Literal.Value maybeSpecial() {
 			switch (source.peek) {
 				case 'b':
 					source.skip();
@@ -143,10 +164,7 @@ struct Lexer {
 					return source.takeNumDecimal();
 			}
 		}
-		auto value = source.peek(-1) == '0' ? maybeSpecial() : source.takeNumDecimal();
-		groups ~= new Token.Literal(source.locFrom(start), value);
+		Expr.Literal.Value value = source.peek(-1) == '0' ? maybeSpecial() : source.takeNumDecimal();
+		output(Token.literal(source.locFrom(start), value));
 	}
-
-
 }
-

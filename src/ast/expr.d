@@ -1,3 +1,5 @@
+module ast.expr;
+
 import std.algorithm : map;
 import std.array : join;
 import std.conv : to;
@@ -8,8 +10,8 @@ import loc : Loc;
 import symbol : Name;
 import util : floatToString;
 
-import node : Ast;
-import statement : Statement;
+import ast.node : Ast;
+import ast.statement : Statement;
 
 abstract immutable class Expr_C : Statement {
 	static abstract class VisitorAny {
@@ -21,6 +23,7 @@ abstract immutable class Expr_C : Statement {
 		mixin V!(Expr.Call);
 		mixin V!(Expr.Cond);
 		mixin V!(Expr.Literal);	
+		mixin V!(Expr.Special);
 	}
 	static abstract class Visitor(P, R) : VisitorAny {
 		mixin template V(T) {
@@ -34,6 +37,7 @@ abstract immutable class Expr_C : Statement {
 		mixin V!(Expr.Call);
 		mixin V!(Expr.Cond);
 		mixin V!(Expr.Literal);
+		mixin V!(Expr.Special);
 	}
 	static abstract class VisitorVoid : VisitorAny {
 		final void visitAny(Expr e) {
@@ -42,10 +46,9 @@ abstract immutable class Expr_C : Statement {
 
 		void visit(Expr.Access e) { /* no children */ }
 		void visit(Expr.Block e) {
-			//TODO
+			throw new Error("TODO");
 			//foreach (line; e.lines)
 			//	visitAny(line);
-			visitAny(e.returned);
 		}
 		void visit(Expr.Call e) {
 			visitAny(e.called);
@@ -58,6 +61,10 @@ abstract immutable class Expr_C : Statement {
 			visitAny(e.ifFalse);
 		}
 		void visit(Expr.Literal e) { /* no children */ }
+		void visit(Expr.Special e) {
+			foreach (arg; e.args)
+				visitAny(arg);
+		}
 
 		private static string v(string name) {
 			return "override void* visit(%s e, void* p) { visit(e); return null; }".format(name);
@@ -67,6 +74,7 @@ abstract immutable class Expr_C : Statement {
 		mixin(v("Expr.Call"));
 		mixin(v("Expr.Cond"));
 		mixin(v("Expr.Literal"));
+		mixin(v("Expr.Special"));
 
 		/*
 		Would prefer to do this. Looks like a compiler bug where it can't find the other `visit` method.
@@ -121,16 +129,14 @@ abstract immutable class Expr_C : Statement {
 	//TODO: never allow empty lines
 	static final immutable class Block_C : Expr {
 		Statement[] lines;
-		Expr returned;
 		
-		this(Loc loc, immutable Statement[] lines, Expr returned) pure {
+		this(Loc loc, immutable Statement[] lines) pure {
 			super(loc);
 			this.lines = lines;
-			this.returned = returned;
 		}
 		
 		override string show() {
-			return "Block(%s, %s)".format(lines.map!(line => line.show).join(" "), returned.show);
+			return "Block(%s)".format(lines.map!(line => line.show).join(" "));
 		}
 		mixin Visitable;
 	}
@@ -153,8 +159,7 @@ abstract immutable class Expr_C : Statement {
 	}
 	alias Call = immutable Call_C;
 
-	//static final immutable class Case_C : Expr {
-
+	// TODO: kill and replace with Case
 	static final immutable class Cond_C : Expr {
 		Expr condition;
 		Expr ifTrue;
@@ -174,12 +179,34 @@ abstract immutable class Expr_C : Statement {
 	}
 	alias Cond = immutable Cond_C;
 
+	//TODO: kill Cond
+	static final immutable class Special_C : Expr {
+		Kind kind;
+		Expr[] args;
+
+		this(Loc loc, Kind kind, Expr[] args) {
+			super(loc);
+			this.kind = kind;
+			this.args = args;
+		}
+
+		static enum Kind {
+			and, or, cond
+		}
+
+		override string show() {
+			return "Special(%s, %s)".format(kind, args.map!(e => e.show).join(", "));
+		}
+		mixin Visitable;
+	}
+	alias Special = immutable Special_C;
+
 	static final immutable class Literal_C : Expr {
 		Value value;
 
 		this(Loc loc, Value value) pure {
 			super(loc);
-			this.value = value;
+			this.value = cast(immutable) value;
 		}
 
 		override string show() {
@@ -192,8 +219,8 @@ abstract immutable class Expr_C : Statement {
 			abstract string show() pure;
 
 			static final immutable class Bool_C : Value {
-				static Bool False = new Bool_C(false);
-				static Bool True = new Bool_C(true);
+				static Bool False = new Bool(false);
+				static Bool True = new Bool(true);
 				bool value;
 				private this(bool value) pure { this.value = value; }
 				override immutable(Any) toAny() { return Any.Bool(value); }

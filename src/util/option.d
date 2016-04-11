@@ -4,6 +4,7 @@ module util.option;
 
 import std.format : format;
 
+// TODO: special-case for reference types and nillable values (those with a `isNil` function)
 struct Option(T) {
 	bool hasValue;
 	T value;
@@ -32,6 +33,10 @@ struct Option(T) {
 	}
 
 	static immutable Option none;
+
+	static Option iff(bool cond, T then) {
+		return cond ? Option(then) : none;
+	}
 }
 
 struct Opt(T) {// if (is(T == class)) {

@@ -2,7 +2,7 @@ import std.stdio : writeln;
 
 import run.any : Any;
 import run.code : CodeWriter, Code;
-import interpreter : interpret;
+import run.interpreter : interpret;
 import symbol : Name, TypeName, Symbols;
 import rtype : RType, Property;
 
@@ -19,103 +19,36 @@ import compile.check : checkAll;
 import compile.compileContext : CompileContext;
 import compile.parse : parse;
 import run.debug_interpreter : showCode;
-import runtime : Fn, Module, Runtime;
+import run.runtime : Fn, Module, Runtime;
 import util.array : pop;
 
 import std.stdio : File;
 import std.file : readText;
 
-/*
-print: case: + 1 2
-	>? _ 0
-		1
-	<? _ 0
-		-1
-	else
-		0
-==>
-1 2 +
-|| Call it '_'
-
-0
-fetch _
->?
-if false goto b_
-
-1
-goto end
-
-b_:
-0
-fetch _
-<?
-if false goto else_
-
--1
-goto end
-
-else_:
-0
-
-end_:
-print
-
-
-
-===
-union SI of String Int
-
-fn foo Int a SI
-	case a
-		String
-			length _
-		Int
-			a
-==>
-a
-|| Call it _
-
-fetch _
-isa String
-if false goto int_
-
-fetch _
-length
-goto end
-
-|| We know it isa Int
-fetch _
-
-end:
-return
-
-*/
-
-
-// TODO: make this example work!
+// Then TODO: type checking
+// Then TODO: allow to call other functions
+// Then TODO: records
 
 string src = """
-fn f Bool a Int
-	=? a 0
+rec Point
+	x Real
+	y Real
 """;
 
-// TODO: fix scoop() test (get labels working so we don't just see '1337')
-
 void main() {
-	/*
 	auto s = new Symbols();
 	auto ctx = new CompileContext(s);
-	parse(src, ctx);
-	*/
+	auto mod = parse(src, ctx);
+	writeln(mod.show);
 
-	//scoop();
-
+	/*
 	auto r = new Runtime();
 	Module m = r.loadModule(src);
-	Fn fn = m.getFn("f");
+	Fn fn = m.getFn("main");
 	writeln(fn.code.showCode());
-	//writeln(fn(Any.Int(3)).show);
-	
+	writeln(fn().show);
+	*/
+
 	/*
 	auto ctx = new CompileContext();
 	auto token = lex(src, ctx);

@@ -1,3 +1,5 @@
+module run.runtime;
+
 import ast : Decl, ModuleAst;
 import compile.check : checkAll, Checks;
 import compile.compileContext : CompileContext;
@@ -6,8 +8,8 @@ import symbol : Symbols, Name;
 
 import run.any : Any;
 import run.code : Code;
-import codegen : generateFns;
-import interpreter : interpret;
+import run.codegen : generateFns;
+import run.interpreter : interpret;
 
 //TODO: MOVE
 class Runtime {

@@ -1,10 +1,12 @@
+module run.codegen;
+
 import ast : Decl, Expr, ModuleAst, Signature;
 import compile.check : checkAll, Checks, Binding;
 import symbol : Name;
 import util.array : isEmpty, tail;
 
 import run.code : Code, CodeWriter, Local;
-import runtime : Fn;
+import run.runtime : Fn;
 
 Fn[Name] generateFns(ModuleAst ast, Checks checks) {
 	Fn[Name] res;
@@ -63,8 +65,9 @@ class ExprWriter : Expr.VisitorVoid {
 	}
 
 	override void visit(Expr.Block e) {
-		assert(e.lines.isEmpty);
-		visitAny(e.returned);
+		throw new Error("TODO");
+		/*assert(e.lines.isEmpty);
+		visitAny(e.returned);*/
 	}
 
 	override void visit(Expr.Call e) {
@@ -130,5 +133,9 @@ class ExprWriter : Expr.VisitorVoid {
 
 	override void visit(Expr.Literal e) {
 		cw.ldc(e.value.toAny);
+	}
+
+	override void visit(Expr.Special e) {
+		throw new Error("TODO");
 	}
 }

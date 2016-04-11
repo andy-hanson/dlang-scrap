@@ -2,8 +2,8 @@ module run.code;
 
 import run.any : Any;
 
-public import reader : CodeUser, CodeReader, EndException;
-public import writer : CodeWriter, Local;
+public import run.code.reader : CodeUser, CodeReader, EndException;
+public import run.code.writer : CodeWriter, Local;
 
 immutable struct Code {
 	Any[] constants;

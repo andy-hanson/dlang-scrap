@@ -1,3 +1,5 @@
+module run.interpreter;
+
 import std.algorithm : map;
 import std.format : format;
 import std.stdio : writeln;

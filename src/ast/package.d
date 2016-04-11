@@ -1,6 +1,6 @@
 
-public import node;
-public import decl;
-public import expr;
-public import statement;
-public import typeAst;
+public import ast.node;
+public import ast.decl;
+public import ast.expr;
+public import ast.statement;
+public import ast.typeAst;

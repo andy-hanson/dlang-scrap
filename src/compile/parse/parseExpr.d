@@ -1,72 +1,106 @@
+module compile.parse.parseExpr;
 
-import std.algorithm : map;
-import std.array : array;
-import std.functional : partial;
+import ast : Expr, Statement;
+import loc : Loc, Pos;
 
-import ast : Expr;
-import compile.parse : Parser;
-import loc : Loc;
-import util.array : rtail;
+import compile.parse.lex.token : Token;
+import compile.parse.parser : Parser;
 
-import slice : Lines, Tokens;
-import token : Token;
-
-Expr parseExpr(Parser p, Tokens tokens) pure {
-	auto head = tokens.head;
-	auto tail = tokens.tail;
-	if (tail.isEmpty)
-		return p.parseSingle(head);
-
-	auto opSplit = tail.trySplitOnce(t => Token.Keyword.match(t, Token.Keyword.Kind.colon));
-	Expr[] args;
-	if (opSplit.hasValue) {
-		auto split = opSplit.value;
-		foreach (token; split.before.tokens)
-			args ~= p.parseSingle(token);
-		auto afterParts = split.after.splitMany(t => Token.Keyword.match(t, Token.Keyword.Kind.comma));
-		foreach (part; afterParts)
-			args ~= p.parseExpr(part);
-	} else
-		args = tail.tokens.map!(partial!(parseSingle, p)).array;
-
-	if (Token.Keyword.match(head, Token.Keyword.Kind.cond))
-		return p.parseCond(tokens.loc, args);
-	else
-		return new Expr.Call(tokens.loc, p.parseSingle(head), args);
-}
-
-Expr.Block parseBlock(Parser p, Lines lines) pure {
-	auto statements = lines.tokens.rtail.map!(line => p.parseStatement(Tokens(line))).array;
-	auto returned = p.parseExpr(Tokens(lines.last));
-	return new Expr.Block(lines.loc, statements, returned);
-}
-
-Expr.Cond parseCond(Parser p, Loc loc, Expr[] args) pure {
-	p.ctx.check(args.length == 3, loc, l => l.condArgs);
-	return new Expr.Cond(loc, args[0], args[1], args[2]);
-}
-
-Expr parseSingle(Parser p, Token token) pure {
-	Expr.Literal lit(Expr.Literal.Value value) {
-		return new Expr.Literal(token.loc, value);
+Expr parseExpr(ref Parser p) {
+	Pos start = p.curPos;
+	Expr[] parts = p.parseExprParts();
+	switch (parts.length) {
+		case 0:
+			throw p.unexpected(p.peek);
+		case 1:
+			return parts[0];
+		default:
+			return new Expr.Call(p.locFrom(start), parts[0], parts[1..$]);
 	}
+}
 
-	auto keyword = cast(Token.Keyword) token;
-	if (keyword !is null) {
-		switch (keyword.kind) with (Token.Keyword.Kind) {
-			case false_: return lit(Expr.Literal.Value.Bool.False);
-			case true_: return lit(Expr.Literal.Value.Bool.True);
-			default: throw p.unexpected(keyword);
+Expr parseBlock(ref Parser p) {
+	Pos start = p.curPos;
+	Statement[] lines;
+	loop: for (;;) {
+		lines ~= p.parseStatement();
+		switch (p.next().kind) with (Token.Kind) {
+			case dedent:
+				break loop;
+			case newline:
+				break;
+			default:
+				// There shoudldn't be any other possibilities.
+				assert(false);
 		}
 	}
 
-	auto literal = cast(Token.Literal) token;
-	if (literal !is null)
-		return lit(literal.value);
+	if (lines.length == 1) {
+		Expr e = cast(Expr) lines[0];
+		if (e !is null)
+			return e;
+	}
+	return new Expr.Block(p.locFrom(start), lines);
+}
 
-	auto name = cast(Token.Name) token;
-	if (name !is null)
-		return new Expr.Access(token.loc, name.name);
+private:
 
-	throw p.unexpected(token);
+//TODO:MOVE?
+Expr[] parseExprParts(ref Parser p) {
+	Expr[] res;
+	loop: for (;;) {
+		auto token = p.next();
+		switch (token.kind) with (Token.Kind) {
+			case newline: case dedent:
+				p.backUp();
+				break loop;
+			case and: case or:
+				Pos start = p.curPos;
+				auto args = p.parseExprParts(); 
+				auto kind = token.kind == Token.Kind.and ? Expr.Special.Kind.and : Expr.Special.Kind.or;
+				res ~= new Expr.Special(p.locFrom(start), kind, args);
+				break loop;
+			case case_:
+				throw new Error("TODO");
+			case colon:
+				res ~= p.parseExpr();
+				break loop;
+			case cond: //TODO: share parsing code with Special?
+				Pos start = p.curPos;
+				auto args = p.parseExprParts();
+				p.ctx.check(args.length == 3, p.curPos, l => l.condArgs);
+				res ~= new Expr.Cond(p.locFrom(start), args[0], args[1], args[2]);
+				break loop;
+			case if_: case unless:
+				/*
+				bool isUnless = token.kind == Token.Kind.unless;
+				auto kind = token.kind == Token.Kind.if_ ? Expr.Special.Kind.if_ : Expr.Special.Kind.unless;
+				auto cond = readExprNoBlock();
+				auto result = readBlock();
+				return new Expr.Special(p.locFrom(start), kind, [cond, result]);
+				*/
+				throw new Error("TODO");
+			default:
+				res ~= p.parseSingle(token);
+		}
+	}
+	return res;
+}
+
+Expr parseSingle(ref Parser p, Token token) {
+	Expr.Literal lit(Expr.Literal.Value value) {
+		return new Expr.Literal(token.loc, value);
+	}
+	switch (token.kind) with (Token.Kind) {
+		case name:
+			return new Expr.Access(token.loc, token.name);
+		case literal:
+			return lit(token.literal);
+		case false_:
+			return lit(Expr.Literal.Value.Bool.False);
+		case true_:
+			return lit(Expr.Literal.Value.Bool.True);
+		default:
+			throw p.unexpected(token);
+	}
 }

@@ -1,11 +1,12 @@
 module compile.check;
 
 import ast : Expr, ModuleAst, TypeAst;
-import compile.compileContext : CompileContext;
 
-import bind : Binding, Bindings, getBindings;
-import type : Type;
-import typeCheck : typeCheck;
+import compile.compileContext : CompileContext;
+import compile.type : Type;
+
+import compile.check.bind : Binding, Bindings, getBindings;
+import compile.check.typeCheck : typeCheck;
 
 Checks checkAll(ModuleAst mod, CompileContext ctx) {
 	auto bindings = getBindings(mod, ctx);

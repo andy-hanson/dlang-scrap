@@ -89,6 +89,6 @@ private:
 	string result = "";
 
 	void write(string s) {
-		result ~= s;
+		result ~= s ~ '\n';
 	}
 }

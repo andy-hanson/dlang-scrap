@@ -1,3 +1,4 @@
+module compile.type;
 
 import ast : Decl;
 import symbol : TypeName;

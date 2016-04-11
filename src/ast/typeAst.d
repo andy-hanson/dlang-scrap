@@ -1,9 +1,11 @@
+module ast.typeAst;
+
 import std.string : format;
 
 import loc : Loc;
 import symbol : TypeName;
 
-import node : Ast;
+import ast.node : Ast;
 
 abstract immutable class TypeAst_C : Ast {
 	this(Loc loc) pure {

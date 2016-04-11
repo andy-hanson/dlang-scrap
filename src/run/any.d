@@ -1,7 +1,7 @@
 module run.any;
 
 import std.algorithm : map;
-import std.array : join;
+import std.array : array, join;
 import std.conv : to;
 import std.format : format;
 import std.range : iota;
@@ -36,27 +36,13 @@ abstract class Any {
 
 	static final class Int : Any {
 		immutable int value;
-		// TODO: following would be preferrable
-		//static Int[256] cache = iota(-128, 127).map!(i => new Int(i));
-		static immutable Int[256] cache;
-		static this() {
-			foreach (idx, ref value; cache)
-				value = new Int((cast(int) idx) - 128);
-		}
-
+		
 		static Int opCall(int i) pure {
 			int cacheIdx = i + 128;
 			if (0 <= cacheIdx && cacheIdx < cache.length)
 				return cast(Int) cache[cacheIdx];
 			else
 				return new Int(i);
-			/*
-			Int* cached = (i + 128) in cache;
-			if (cached)
-				return *cached;
-			else
-				return new Int(i);
-			*/
 		}
 	
 		override string show() const {
@@ -74,6 +60,7 @@ abstract class Any {
 
 	private:
 		this(int value) pure { this.value = value; }
+		static immutable Int[256] cache = iota(-128, 128).map!((int i) => new immutable Int(i)).array;
 	}
 
 	static final class Real : Any {

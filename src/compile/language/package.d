@@ -2,15 +2,14 @@ module compile.language;
 
 import std.format : format;
 
-import groupContext : GroupBuilder;
-import token : Token;
+import compile.parse.lex.token : Token;
 
 abstract immutable class Language {
 	// Lex
 	string commentNeedsSpace() pure;
 	string emptyBlock() pure;
 	string leadingZero() pure;
-	string mismatchedGroupClose(GroupBuilder.Kind expected, GroupBuilder.Kind actual) pure;
+	string mismatchedGroupClose(Token.Kind expected, Token.Kind actual) pure;
 	string noLeadingSpace() pure;
 	string nonLeadingTab() pure;
 	string tooMuchIndent() pure;
@@ -51,7 +50,7 @@ immutable class English : Language {
 		return "Leading '0' must be followed by 'b', 'x', or decimal point ('.').";
 	}
 
-	override string mismatchedGroupClose(GroupBuilder.Kind expected, GroupBuilder.Kind actual) {
+	override string mismatchedGroupClose(Token.Kind expected, Token.Kind actual) {
 		return "Trying to close %foo, but last opened was %bar";
 	}
 

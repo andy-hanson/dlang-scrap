@@ -1,9 +1,12 @@
+module compile.check.typeCheck;
+
 import ast : Decl, Expr, ModuleAst;
 import loc : Loc;
 
-import bind : Bindings;
 import compile.compileContext : CompileContext;
-import type : Type;
+import compile.type : Type;
+
+import compile.check.bind : Bindings;
 
 immutable(Type[Expr]) typeCheck(ModuleAst mod, Bindings bindings, CompileContext ctx) {
 	Type[Expr] res;

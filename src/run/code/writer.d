@@ -1,3 +1,5 @@
+module run.code.writer;
+
 import std.algorithm : map;
 import std.array : array;
 import std.range : iota;

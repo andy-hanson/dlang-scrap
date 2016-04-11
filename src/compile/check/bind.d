@@ -1,10 +1,13 @@
+module compile.check.bind;
+
 import ast : Decl, Expr, ModuleAst, Signature, TypeAst;
 import loc : Loc;
 import symbol : Name, TypeName;
 
-import compile.check.binding : Binding, Binding_C;
 import compile.compileContext : CompileContext;
-import type : Type, Type_C;
+import compile.type : Type, Type_C;
+
+import compile.check.binding : Binding, Binding_C;
 
 immutable struct Bindings {
 	Binding opIndex(Expr.Access a) {
@@ -34,6 +37,9 @@ void addDeclarationBindings(ModuleAst mod, BindingContext ctx) {
 			override void visit(Decl.Val.Fn fn) {
 				ctx.set(decl.loc, fn.name, new Binding.Declared(fn));
 			}
+			override void visit(Decl.Type.Rec rec) {
+				throw new Error("TODO");
+			}
 		});
 }
 
@@ -47,6 +53,9 @@ void useBindings(ModuleAst mod, BindingContext ctx) {
 				foreach (param; sig.params)
 					ctx.bindType(param.type);
 				ctx.withLocals(sig.params, () => fn.value.accept(ex));
+			}
+			override void visit(Decl.Type.Rec rec) {
+				throw new Error("TODO");
 			}
 		});
 }

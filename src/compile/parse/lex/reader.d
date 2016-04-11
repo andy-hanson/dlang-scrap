@@ -1,3 +1,5 @@
+module compile.parse.lex.reader;
+
 import std.algorithm : endsWith;
 import std.conv : parse;
 import std.regex : ctRegex, matchFirst, StaticRegex;
@@ -8,16 +10,16 @@ import loc : Loc, Pos;
 import symbol : Name, TypeName;
 import util : isInRange;
 
-struct SourceContext {
-	private CompileContext ctx;
+//TODO:STRUCT
+class Reader {
 	string source;
 	immutable(char)* ptr;
 	immutable(char)* endPtr;
+	// TODO: just use a Pos
 	ushort line;
 	ushort column;
 
-	this(string source, CompileContext ctx) pure {
-		this.ctx = ctx;
+	this(string source) pure {
 		// Lexing algorithm requires ending newline to close any blocks.
 		if (!source.endsWith('\n'))
 			source ~= '\n';
@@ -25,6 +27,11 @@ struct SourceContext {
 		this.source = source;
 		ptr = source.ptr;
 		endPtr = ptr + source.length;
+	}
+
+	void goBack() pure {
+		ptr--;
+		column--;
 	}
 
 	Pos pos() pure {
@@ -115,21 +122,13 @@ struct SourceContext {
 		return line - startLine;
 	}
 
-	Name takeName() {
-		return ctx.symbols.name(takeNameLike());
-	}
-
-	TypeName takeTypeName() {
-		return ctx.symbols.typeName(takeNameLike());
-	}
-
-private:
 	string takeNameLike() {
 		auto start = ptr - 1;
-		skipUntilRegex(ctRegex!r"[^a-zA-Z0-9\\+\\-\\*\\/]");
+		skipUntilRegex(ctRegex!r"[^a-zA-Z0-9\\+\\-\\*\\/\\=\\?]");
 		return sliceFrom(start);
 	}
 
+private:
 	// TODO: matchFirst is impure?
 	uint skipUntilRegex(StaticRegex!char rgx) {
 		auto capture = matchFirst(remainingSlice(), rgx);

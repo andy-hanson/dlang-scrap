@@ -1,9 +1,12 @@
+module ast.node;
+
 import std.algorithm : map;
 import std.array : join;
 import std.format : format;
 
-import decl : Decl;
 import loc : Loc;
+
+import ast.decl : Decl;
 
 abstract immutable class Ast {
 	Loc loc;

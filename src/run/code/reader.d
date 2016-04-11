@@ -1,3 +1,5 @@
+module run.code.reader;
+
 import run.any : Any;
 import run.code : ByteCode, Code;
 import rtype : RType;

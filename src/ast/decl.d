@@ -1,16 +1,20 @@
+module ast.decl;
+
 import std.algorithm : map;
 import std.array : join;
 import std.format : format;
 
-import node : Ast;
-import expr : Expr;
-import typeAst : TypeAst;
 import loc : Loc;
 import symbol : Name, TypeName;
+
+import ast.expr : Expr;
+import ast.node : Ast;
+import ast.typeAst : TypeAst;
 
 abstract immutable class Decl_C : Ast {
 	static abstract class Visitor {
 		void visit(Decl.Val.Fn decl);
+		void visit(Decl.Type.Rec decl);
 	}
 	abstract void accept(Visitor v);
 	private mixin template Visitable() {
@@ -42,7 +46,7 @@ abstract immutable class Decl_C : Ast {
 			}
 			
 			override string show() {
-				return "Fn(%s, %s, %s)".format(name.value, sig.show, value.show);
+				return "Fn(%s, %s, %s)".format(name.show, sig.show, value.show);
 			}
 			mixin Visitable;
 		}
@@ -58,16 +62,46 @@ abstract immutable class Decl_C : Ast {
 			this.name = name;
 		}
 
-		//static final immutable class Rec_C : Type {
+		static final immutable class Rec_C : Type {
+			Property[] properties;
+			this(Loc loc, TypeName name, immutable Property[] properties) {
+				super(loc, name);
+				this.properties = properties;
+			}
 
-		//}
+			override string show() {
+				//TOOD: show extension for array
+				return "Rec(%s, %s)".format(name.show, properties.map!(p => p.show).join(", "));
+			}
+			mixin Visitable;
+		}
+		alias Rec = immutable Rec_C;
 	}
 	alias Type = immutable Type_C;
 	
 	//match
 }
-alias Decl = Decl_C;
-		
+alias Decl = immutable Decl_C;
+
+
+
+static final immutable class Property_C : Ast {
+	Name name;
+	TypeAst type;
+
+	this(Loc loc, Name name, TypeAst type) {
+		super(loc);
+		this.name = name;
+		this.type = type;
+	}
+
+	override string show() {
+		return "Property(%s, %s)".format(name.show, type.show);
+	}
+}
+alias Property = immutable Property_C;
+	
+
 static final immutable class Signature_C : Ast {
 	TypeAst returnType;
 	Parameter[] params;
